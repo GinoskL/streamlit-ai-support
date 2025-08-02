@@ -24,52 +24,30 @@ FRASES_CARGANDO = [
 
 EMOJIS_RANDOM = ["🛍️", "👕", "👗", "👔", "🧥", "👖", "👟", "🎽"]
 
-def configurar_openai():
+def inicializar_session_state():
     """
-    Acá configuramos OpenAI. Si no tenés API key, no te preocupes,
-    te explico cómo conseguir una gratis.
+    Inicializa todas las variables de session_state que vamos a usar
     """
-    try:
-        # Primero intentamos con variable de entorno
-        api_key = os.getenv("OPENAI_API_KEY")
-        
-        # Si no hay variable de entorno, usamos session_state para mantener la key
-        if not api_key:
-            if 'api_key' not in st.session_state:
-                st.session_state.api_key = ""
-            
-            with st.sidebar:
-                st.markdown("### 🔑 Necesitás una API Key")
-                st.markdown("""
-                **¿No tenés una?** No pasa nada:
-                1. Andá a [OpenAI](https://platform.openai.com)
-                2. Creá una cuenta (es gratis)
-                3. Pedí tu API key
-                4. Pegala acá abajo 👇
-                """)
-                
-                # Acá está el fix principal: key único y usando session_state
-                api_key_input = st.text_input(
-                    "Tu API Key:", 
-                    type="password",
-                    placeholder="sk-...",
-                    value=st.session_state.api_key,
-                    key="openai_api_key_input"  # Key único para evitar conflictos
-                )
-                
-                # Guardamos en session_state para que persista
-                if api_key_input:
-                    st.session_state.api_key = api_key_input
-                    api_key = api_key_input
-        
-        if api_key:
-            openai.api_key = api_key
+    if 'api_key' not in st.session_state:
+        st.session_state.api_key = os.getenv("OPENAI_API_KEY", "")
+    if 'api_configurada' not in st.session_state:
+        st.session_state.api_configurada = False
+    if 'respuesta_generada' not in st.session_state:
+        st.session_state.respuesta_generada = False
+
+def verificar_api_key():
+    """
+    Verifica si la API key está configurada y es válida
+    """
+    if st.session_state.api_key:
+        try:
+            openai.api_key = st.session_state.api_key
+            st.session_state.api_configurada = True
             return True
-        return False
-        
-    except Exception as e:
-        st.error(f"Uh, algo salió mal: {str(e)}")
-        return False
+        except Exception:
+            st.session_state.api_configurada = False
+            return False
+    return False
 
 def obtener_respuesta_ia(consulta_cliente):
     """
@@ -102,7 +80,7 @@ def obtener_respuesta_ia(consulta_cliente):
         Nada de "estimado cliente" ni boludeces así. Hablá normal.
         """
         
-        client = openai.OpenAI(api_key=openai.api_key)
+        client = openai.OpenAI(api_key=st.session_state.api_key)
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -110,7 +88,7 @@ def obtener_respuesta_ia(consulta_cliente):
                 {"role": "user", "content": consulta_cliente}
             ],
             max_tokens=400,
-            temperature=0.9  # Bien creativo para que suene natural
+            temperature=0.9
         )
         
         return response.choices[0].message.content.strip()
@@ -119,9 +97,8 @@ def obtener_respuesta_ia(consulta_cliente):
         return f"Perdón, se me colgó el sistema. Probá de nuevo en un ratito. (Error técnico: {str(e)})"
 
 def main():
-    # Inicializamos session_state para evitar problemas
-    if 'respuesta_generada' not in st.session_state:
-        st.session_state.respuesta_generada = False
+    # Inicializamos todo al principio
+    inicializar_session_state()
     
     # Header con un poco más de onda
     col1, col2 = st.columns([3, 1])
@@ -150,7 +127,7 @@ def main():
     - Tener respuestas listas para las preguntas más comunes
     """)
     
-    # Sidebar más relajado
+    # Sidebar - SOLO AQUÍ manejamos la API key
     with st.sidebar:
         st.markdown("### 🤓 Datos técnicos")
         st.markdown("""
@@ -161,10 +138,39 @@ def main():
         """)
         
         st.markdown("### ⚙️ Configuración")
-        api_ok = configurar_openai()
+        
+        # Manejo de API key SOLO acá, una sola vez
+        if not st.session_state.api_key:
+            st.markdown("""
+            **¿No tenés una API key?** No pasa nada:
+            1. Andá a [OpenAI](https://platform.openai.com)
+            2. Creá una cuenta (es gratis)
+            3. Pedí tu API key
+            4. Pegala acá abajo 👇
+            """)
+        
+        # Input de API key - SOLO UNA VEZ
+        nueva_api_key = st.text_input(
+            "Tu API Key de OpenAI:", 
+            type="password",
+            placeholder="sk-...",
+            value=st.session_state.api_key,
+            key="api_key_input_unico",  # Key único y descriptivo
+            help="Pegá tu API key de OpenAI acá"
+        )
+        
+        # Actualizamos la API key si cambió
+        if nueva_api_key != st.session_state.api_key:
+            st.session_state.api_key = nueva_api_key
+            st.session_state.api_configurada = False  # Reset para verificar de nuevo
+        
+        # Verificamos la API key
+        api_ok = verificar_api_key()
         
         if api_ok:
             st.success("✅ Conectado y listo")
+        elif st.session_state.api_key:
+            st.error("❌ API key inválida o sin saldo")
         else:
             st.info("👆 Configurá tu API key para empezar")
         
@@ -198,29 +204,28 @@ def main():
             - ¿Aceptan tarjeta de débito?
             """)
     
-    # Campo de consulta - SEGUNDO FIX: key único para el text_area
+    # Campo de consulta
     consulta = st.text_area(
         "Escribí tu consulta acá:",
         placeholder="Ej: Hola, ¿tienen camperas de cuero? Necesito una para mi novio que es medio gordito...",
         height=100,
         help="Escribí como le hablarías a cualquier vendedor",
-        key="consulta_cliente_input"  # Key único para evitar conflictos
+        key="consulta_principal"
     )
     
     # Botón con un poco más de personalidad
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # TERCER FIX: key único para el botón
         if st.button(
             "🚀 Ver qué me responde Martín", 
             type="primary", 
             use_container_width=True,
-            key="generar_respuesta_btn"
+            key="btn_generar_respuesta"
         ):
             if not consulta.strip():
                 st.warning("⚠️ Escribí algo primero, no soy adivino 😅")
-            elif not configurar_openai():
-                st.error("❌ Necesito que configures la API key primero")
+            elif not st.session_state.api_configurada:
+                st.error("❌ Necesito que configures una API key válida primero")
             else:
                 # Loading con frases random
                 frase_loading = random.choice(FRASES_CARGANDO)
@@ -233,10 +238,15 @@ def main():
                 st.session_state.respuesta_generada = True
                 st.session_state.ultima_respuesta = respuesta
                 st.session_state.timestamp = datetime.now()
+                st.session_state.ultima_consulta = consulta
     
-    # Mostrar respuesta si existe (CUARTO FIX: evitar regenerar en cada refresh)
+    # Mostrar respuesta si existe
     if st.session_state.respuesta_generada and 'ultima_respuesta' in st.session_state:
         st.success("✅ Listo, acá tenés la respuesta:")
+        
+        # Mostrar la consulta original
+        with st.expander("📝 Tu consulta fue:", expanded=False):
+            st.write(st.session_state.ultima_consulta)
         
         # La respuesta en un formato más lindo
         st.markdown("### 💬 Martín te responde:")
@@ -262,10 +272,14 @@ def main():
         with col1:
             st.caption(f"📅 Generado: {st.session_state.timestamp.strftime('%d/%m/%Y a las %H:%M')}")
         with col2:
-            # QUINTO FIX: key único para el botón de like
-            if st.button("👍 Me gustó la respuesta", key="like_respuesta_btn"):
+            if st.button("👍 Me gustó la respuesta", key="btn_like"):
                 st.balloons()
                 st.success("¡Genial! Me alegra que te haya servido")
+        
+        # Botón para limpiar y empezar de nuevo
+        if st.button("🔄 Hacer otra consulta", key="btn_nueva_consulta"):
+            st.session_state.respuesta_generada = False
+            st.rerun()
     
     # Sección explicativa pero más divertida
     st.markdown("---")
@@ -311,9 +325,9 @@ def main():
     with col2:
         st.markdown("""
         ### 📊 Stats del proyecto
-        - **Líneas de código:** ~250
+        - **Líneas de código:** ~280
         - **Horas invertidas:** Muchas
-        - **Versiones probadas:** 20+
+        - **Versiones probadas:** 25+
         - **Nivel de satisfacción:** 😊
         """)
     
