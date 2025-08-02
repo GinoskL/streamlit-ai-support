@@ -3,16 +3,16 @@ Acá podés personalizar todo para que sea TU vendedor virtual.
 Cambié los nombres y datos para que sea más fácil de adaptar.
 """
 
-#vendedor virtual
+# Tu vendedor virtual (cambialos por como querés que sea)
 MI_VENDEDOR = {
-    "nombre": "Martín",
+    "nombre": "Martín",  # Cambiá por el nombre que quieras
     "edad": 35,
     "experiencia": "8 años",
     "personalidad": "Natural, honesto, con humor, conoce a sus clientes",
     "historia": "Empezó vendiendo en ferias y ahora tiene su local"
 }
 
-#negocio
+# Tu negocio (acá ponés los datos reales)
 MI_NEGOCIO = {
     "tipo": "tienda de ropa",
     "ubicacion": "en el centro",
@@ -24,7 +24,7 @@ MI_NEGOCIO = {
     "descuentos": "clientes frecuentes tienen descuentos especiales"
 }
 
-#Frases que usa mi vendedor
+# Frases que usa tu vendedor (podés agregar más)
 FRASES_TIPICAS = [
     "Tranquilo/a, te explico...",
     "Mirá, la verdad es que...",
