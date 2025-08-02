@@ -7,7 +7,7 @@ import time
 
 # Configuración de la página
 st.set_page_config(
-    page_title="MiVendedor.AI - Como tener el mejor vendedor, pero virtual",
+    page_title="MiVendedor.IA - Como tener el mejor vendedor, pero virtual",
     page_icon="🏪",
     layout="wide",
     initial_sidebar_state="collapsed"
