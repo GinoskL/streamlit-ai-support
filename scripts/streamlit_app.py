@@ -103,7 +103,7 @@ def obtener_respuesta_ia(consulta_cliente):
 def main():
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.title("🏪 MiVendedor.AI")
+        st.title("🏪 MiVendedor.IA")
         st.markdown("*El vendedor que nunca se toma franco*")
     with col2:
         st.markdown(f"### {random.choice(EMOJIS_RANDOM)}")
