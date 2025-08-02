@@ -251,17 +251,25 @@ def main():
         # La respuesta en un formato más lindo
         st.markdown("### 💬 Martín te responde:")
         
-        # Un container más estilizado
+        # Un container más estilizado con mejor contraste
         with st.container():
             st.markdown(f"""
             <div style="
-                background-color: #f0f2f6; 
-                padding: 20px; 
-                border-radius: 10px; 
-                border-left: 4px solid #1f77b4;
-                margin: 10px 0;
+                background-color: #ffffff; 
+                padding: 25px; 
+                border-radius: 12px; 
+                border-left: 5px solid #1f77b4;
+                margin: 15px 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                border: 1px solid #e0e0e0;
             ">
-                <p style="margin: 0; font-size: 16px; line-height: 1.6;">
+                <p style="
+                    margin: 0; 
+                    font-size: 16px; 
+                    line-height: 1.7;
+                    color: #2c3e50;
+                    font-weight: 400;
+                ">
                     {st.session_state.ultima_respuesta}
                 </p>
             </div>
