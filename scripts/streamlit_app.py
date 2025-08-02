@@ -2,239 +2,286 @@ import streamlit as st
 import openai
 import os
 from datetime import datetime
+import random
+import time
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Atención al Cliente con IA - Tu Asistente Virtual",
-    page_icon="🛍️",
+    page_title="MiVendedor.AI - Como tener el mejor vendedor, pero virtual",
+    page_icon="🏪",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Función para inicializar la API de OpenAI
+FRASES_CARGANDO = [
+    "Pensando como respondería mi abuela que tenía almacén...",
+    "Consultando con el vendedor virtual más simpático del barrio...",
+    "Armando una respuesta que no suene a robot...",
+    "Buscando la forma más amable de decirte esto...",
+    "Activando modo 'vendedor con 20 años de experiencia'..."
+]
+
+EMOJIS_RANDOM = ["🛍️", "👕", "👗", "👔", "🧥", "👖", "👟", "🎽"]
+
 def configurar_openai():
     """
-    Configura la conexión con OpenAI.
-    Si no tenés la API key como variable de entorno, podés ingresarla acá.
+    Acá configuramos OpenAI. Si no tenés API key, no te preocupes,
+    te explico cómo conseguir una gratis.
     """
     try:
-        # Primero busca la API key en las variables de entorno
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            # Si no la encuentra, permite ingresarla en la barra lateral
-            api_key = st.sidebar.text_input(
-                "Ingresá tu API Key de OpenAI:", 
-                type="password",
-                help="Podés conseguir tu API key gratis en https://platform.openai.com/api-keys"
-            )
+            with st.sidebar:
+                st.markdown("### 🔑 Necesitás una API Key")
+                st.markdown("""
+                **¿No tenés una?** No pasa nada:
+                1. Andá a [OpenAI](https://platform.openai.com)
+                2. Creá una cuenta (es gratis)
+                3. Pedí tu API key
+                4. Pegala acá abajo 👇
+                """)
+                api_key = st.text_input(
+                    "Tu API Key:", 
+                    type="password",
+                    placeholder="sk-..."
+                )
         
         if api_key:
             openai.api_key = api_key
             return True
         return False
     except Exception as e:
-        st.error(f"Ups, hubo un problema al configurar OpenAI: {str(e)}")
+        st.error(f"Uh, algo salió mal: {str(e)}")
         return False
 
-# Función para generar respuesta con IA
 def obtener_respuesta_ia(consulta_cliente):
     """
-    Le manda la consulta del cliente a GPT y trae la respuesta.
-    
-    Args:
-        consulta_cliente (str): Lo que escribió el cliente
-    
-    Returns:
-        str: La respuesta que generó la IA
+    Acá es donde pasa la magia. Le preguntamos a la IA y esperamos
+    que nos dé una respuesta que no suene a manual de instrucciones.
     """
     try:
-        # Prompt mejorado y más natural
         prompt_sistema = """
-        Sos un vendedor experimentado de una tienda de ropa que atiende clientes hace años. 
+        Sos Martín, tenés 35 años y hace 8 años que tenés una tienda de ropa en el centro. 
+        Empezaste vendiendo en ferias y ahora tenés tu local. Conocés a tus clientes, 
+        sabés qué les gusta y siempre tratás de ayudar.
         
-        Tu personalidad:
-        - Amable y cercano, pero siempre profesional
-        - Te gusta ayudar y resolver problemas
-        - Conocés bien los productos y la tienda
-        - Hablás de manera natural, como cualquier vendedor argentino
+        Tu forma de ser:
+        - Hablás natural, como habla cualquier argentino
+        - Sos honesto: si algo no lo sabés, lo decís
+        - Te gusta hacer sentir cómodo al cliente
+        - No usás palabras rebuscadas ni frases de marketing
+        - Si alguien pregunta algo raro, lo tomás con humor
         
-        Información de tu tienda:
-        - Vendés ropa para toda la familia: hombres, mujeres y chicos
-        - Hacés envíos a domicilio (llegan en 1 o 2 días)
-        - Si no les gusta algo, pueden devolverlo hasta 30 días después
-        - Abrís de lunes a sábado de 9 a 20hs, domingos de 10 a 18hs
-        - Aceptás efectivo, tarjetas y transferencias
-        - Tenés un programa de clientes frecuentes con descuentos especiales
+        Tu tienda:
+        - Vendés ropa para toda la familia (desde bebés hasta abuelos)
+        - Los envíos los hacés por moto, llegan en 1 o 2 días máximo
+        - Si algo no les gusta, lo pueden cambiar tranquilos (30 días)
+        - Abrís todos los días: lunes a sábado hasta las 8, domingos hasta las 6
+        - Aceptás de todo: efectivo, tarjeta, transferencia, hasta Mercado Pago
+        - Los clientes que vienen seguido tienen descuentos (porque vos los conocés)
         
-        Importante: Respondé siempre de manera útil y completa, pero sin sonar robótico. 
-        Hablá como hablaría cualquier vendedor amable de Buenos Aires.
+        Importante: Respondé como si fueras realmente Martín hablando con un cliente.
+        Nada de "estimado cliente" ni boludeces así. Hablá normal.
         """
         
-        # Llamada a la API de OpenAI (versión actualizada)
         client = openai.OpenAI(api_key=openai.api_key)
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": prompt_sistema},
-                {"role": "user", "content": f"Cliente pregunta: {consulta_cliente}"}
+                {"role": "user", "content": consulta_cliente}
             ],
-            max_tokens=350,
-            temperature=0.8  # Un poco más creativo para sonar más natural
+            max_tokens=400,
+            temperature=0.9 
         )
         
         return response.choices[0].message.content.strip()
     
     except Exception as e:
-        return f"Disculpá, hubo un problemita técnico y no pude procesar tu consulta. Error: {str(e)}"
+        return f"Perdón, se me colgó el sistema. Probá de nuevo en un ratito. (Error técnico: {str(e)})"
 
-# Función principal de la aplicación
 def main():
-    """
-    Acá se arma toda la interfaz de la aplicación
-    """
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("🏪 MiVendedor.AI")
+        st.markdown("*El vendedor que nunca se toma franco*")
+    with col2:
+        st.markdown(f"### {random.choice(EMOJIS_RANDOM)}")
     
-    # Título principal
-    st.title("🛍️ Tu Asistente Virtual de Atención al Cliente")
     st.markdown("---")
     
-    # Descripción más natural
     st.markdown("""
-    ### ¿Qué hace esta aplicación?
+    ### Hola! 👋 
     
-    Imaginate tener un vendedor que nunca se cansa, que siempre está de buen humor y que puede 
-    atender a tus clientes las 24 horas. Eso es exactamente lo que hace esta aplicación.
+    Te cuento qué onda con esto: hice esta aplicación porque me cansé de ver tiendas 
+    que pierden clientes por no poder atender consultas fuera del horario. 
     
-    Usamos **Inteligencia Artificial** para que cualquier consulta de tus clientes tenga una 
-    respuesta rápida, amable y profesional. Perfecto para negocios que quieren brindar un 
-    servicio de primera, sin importar la hora.
+    **La idea es simple:** vos ponés una pregunta como si fueras un cliente, y la app 
+    te devuelve una respuesta que podría dar cualquier buen vendedor. Nada de respuestas 
+    robóticas ni frases hechas.
+    
+    Es perfecta para:
+    - Probar cómo sonaría tu atención automática
+    - Entrenar empleados nuevos  
+    - Tener respuestas listas para las preguntas más comunes
     """)
     
-    # Barra lateral con info
+    # Sidebar más relajado
     with st.sidebar:
-        st.header("📋 Info del proyecto")
+        st.markdown("### 🤓 Datos técnicos")
         st.markdown("""
-        **¿Para quién es?**
-        - Dueños de tiendas de ropa
-        - Pequeños comercios
-        - Cualquiera que quiera automatizar la atención
-        
-        **¿Qué tecnología usa?**
-        - Streamlit (interfaz web)
-        - OpenAI GPT (la inteligencia artificial)
-        - Python (el lenguaje de programación)
+        **Proyecto final para:** Curso de IA  
+        **Hecho con:** Python + Streamlit + OpenAI  
+        **Tiempo invertido:** Demasiado (pero valió la pena)  
+        **Cafés consumidos:** No preguntes  
         """)
         
-        # Configuración de API
-        st.header("⚙️ Configuración")
+        st.markdown("### ⚙️ Configuración")
         api_ok = configurar_openai()
         
         if api_ok:
-            st.success("✅ Todo listo para usar")
+            st.success("✅ Conectado y listo")
         else:
-            st.warning("⚠️ Necesitás configurar tu API key para empezar")
+            st.info("👆 Configurá tu API key para empezar")
+        
+        st.markdown("### 🎯 Tips")
+        st.markdown("""
+        - Preguntá como si fueras un cliente real
+        - Probá preguntas raras a ver qué pasa
+        - Fijate si las respuestas suenan naturales
+        """)
     
-    # Sección principal donde el usuario hace la consulta
-    st.header("💬 Probá hacer una consulta")
-    st.markdown("Escribí cualquier pregunta como si fueras un cliente de la tienda:")
+    st.markdown("## 💬 Hacé tu consulta")
     
-    # Campo de texto para la consulta
+    with st.expander("🤔 ¿No sabés qué preguntar? Acá tenés ideas"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Preguntas típicas:**
+            - ¿Tienen ropa de trabajo?
+            - ¿Hacen descuentos por cantidad?
+            - ¿Puedo apartar algo hasta el viernes?
+            - ¿Tienen local físico o solo online?
+            """)
+        with col2:
+            st.markdown("""
+            **Preguntas más específicas:**
+            - ¿Qué onda con los talles? ¿Vienen grandes?
+            - ¿Si compro hoy, cuándo me llega?
+            - ¿Tienen ropa para ir a un casamiento?
+            - ¿Aceptan tarjeta de débito?
+            """)
+    
+    # Campo de consulta
     consulta = st.text_area(
-        "Tu consulta:",
-        placeholder="Por ejemplo: ¿Hacen envíos gratis? ¿Tienen talles grandes? ¿Puedo cambiar algo si no me queda bien?",
-        height=120,
-        help="Escribí lo que se te ocurra, como si estuvieras hablando con un vendedor"
+        "Escribí tu consulta acá:",
+        placeholder="Ej: Hola, ¿tienen camperas de cuero? Necesito una para mi novio que es medio gordito...",
+        height=100,
+        help="Escribí como le hablarías a cualquier vendedor"
     )
     
-    # Botón para procesar - más centrado y llamativo
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        generar_respuesta = st.button(
-            "🚀 Obtener respuesta automática", 
-            type="primary",
-            use_container_width=True
-        )
+        if st.button("🚀 Ver qué me responde Martín", type="primary", use_container_width=True):
+            if not consulta.strip():
+                st.warning("⚠️ Escribí algo primero, no soy adivino 😅")
+            elif not configurar_openai():
+                st.error("❌ Necesito que configures la API key primero")
+            else:
+                frase_loading = random.choice(FRASES_CARGANDO)
+                with st.spinner(frase_loading):
+                    time.sleep(random.uniform(1, 2))
+                    respuesta = obtener_respuesta_ia(consulta)
+                
+                st.success("✅ Listo, acá tenés la respuesta:")
+                
+                st.markdown("### 💬 Martín te responde:")
+                
+                with st.container():
+                    st.markdown(f"""
+                    <div style="
+                        background-color: #f0f2f6; 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        border-left: 4px solid #1f77b4;
+                        margin: 10px 0;
+                    ">
+                        <p style="margin: 0; font-size: 16px; line-height: 1.6;">
+                            {respuesta}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.caption(f"📅 Generado: {datetime.now().strftime('%d/%m/%Y a las %H:%M')}")
+                with col2:
+                    if st.button("👍 Me gustó la respuesta"):
+                        st.balloons()
+                        st.success("¡Genial! Me alegra que te haya servido")
     
-    # Acá se procesa todo cuando aprietan el botón
-    if generar_respuesta:
-        if not consulta.strip():
-            st.warning("⚠️ Escribí algo primero para que pueda ayudarte.")
-        elif not configurar_openai():
-            st.error("❌ Primero configurá tu API key en la barra lateral.")
-        else:
-            # Mostrar que está trabajando
-            with st.spinner("🤖 Pensando la mejor respuesta..."):
-                respuesta = obtener_respuesta_ia(consulta)
-            
-            # Mostrar el resultado
-            st.success("✅ ¡Listo! Acá tenés la respuesta:")
-            
-            # La respuesta en una caja destacada
-            st.markdown("### 💬 Respuesta del vendedor virtual:")
-            st.info(respuesta)
-            
-            # Info adicional
-            st.markdown(f"**Generado el:** {datetime.now().strftime('%d/%m/%Y a las %H:%M')}")
-            
-            # Opción para "copiar" (simulada porque Streamlit no puede acceder al portapapeles)
-            if st.button("📋 Marcar como útil"):
-                st.success("¡Genial! Nos alegra que te haya servido la respuesta")
-    
-    # Sección explicativa
     st.markdown("---")
-    st.header("🤔 ¿Cómo funciona esto?")
+    st.markdown("## 🤖 ¿Cómo funciona esta cosa?")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("""
         ### 1️⃣ Vos preguntás
-        Escribís cualquier consulta que haría un cliente real en tu tienda.
+        Escribís lo que se te ocurra, como si estuvieras en el local hablando con el vendedor.
         """)
     
     with col2:
         st.markdown("""
-        ### 2️⃣ La IA piensa
-        El sistema toma tu pregunta y la procesa con inteligencia artificial entrenada para atención al cliente.
+        ### 2️⃣ La IA labura
+        OpenAI (la misma tecnología de ChatGPT) procesa tu pregunta y piensa una respuesta.
         """)
     
     with col3:
         st.markdown("""
-        ### 3️⃣ Obtenés la respuesta
-        En segundos tenés una respuesta profesional, amable y lista para usar con tus clientes.
+        ### 3️⃣ Martín responde
+        Te devuelve una respuesta como si fuera un vendedor real con experiencia.
         """)
     
-    # Sección de ejemplos
     st.markdown("---")
-    st.header("💡 Algunos ejemplos para probar")
+    st.markdown("## 🎓 Sobre este proyecto")
     
-    ejemplos_col1, ejemplos_col2 = st.columns(2)
-    
-    with ejemplos_col1:
+    col1, col2 = st.columns([2, 1])
+    with col1:
         st.markdown("""
-        **Consultas sobre envíos:**
-        - "¿Hacen envíos a todo el país?"
-        - "¿Cuánto demora en llegar mi pedido?"
-        - "¿El envío tiene costo?"
+        Este es mi proyecto final para el curso de Inteligencia Artificial. La idea surgió 
+        porque tengo varios amigos con locales que siempre se quejan de lo mismo: "pierdo 
+        ventas porque no puedo atender WhatsApp todo el día".
+        
+        **¿Por qué "Martín"?** Porque necesitaba que el vendedor virtual tuviera personalidad. 
+        Martín está basado en un amigo que tiene local y es el tipo más natural vendiendo que conozco.
+        
+        **¿Funciona bien?** Probalo vos mismo. A mí me sorprendió lo natural que suenan las respuestas.
         """)
     
-    with ejemplos_col2:
+    with col2:
         st.markdown("""
-        **Consultas sobre productos:**
-        - "¿Tienen ropa para embarazadas?"
-        - "¿Qué talles manejan?"
-        - "¿Puedo ver fotos de los productos?"
+        ### 📊 Stats del proyecto
+        - **Líneas de código:** ~200
+        - **Horas invertidas:** Muchas
+        - **Versiones probadas:** 15+
+        - **Nivel de satisfacción:** 😊
         """)
     
-    # Footer más personal
+    #Footer 
     st.markdown("---")
     st.markdown("""
-    <div style='text-align: center; color: #666; padding: 20px;'>
-        <p>🎓 <strong>Proyecto Final - Curso de Inteligencia Artificial</strong></p>
-        <p>Hecho con mucho ☕ y un poco de IA para hacer la vida más fácil</p>
-        <p><em>Porque la tecnología tiene que servir para ayudar a las personas</em></p>
+    <div style='text-align: center; color: #666; padding: 30px;'>
+        <p>🚀 <strong>Hecho con Python, Streamlit y mucha paciencia</strong></p>
+        <p>Si te gustó o tenés alguna sugerencia, me encantaría saberlo</p>
+        <p><em>Porque la tecnología tiene que hacer la vida más fácil, no más complicada</em></p>
+        <br>
+        <p style='font-size: 12px;'>
+            💡 <strong>Tip:</strong> Si querés usar esto en tu negocio real, 
+            solo tenés que cambiar la info de Martín por la tuya en el código
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
-# Ejecutar la aplicación
 if __name__ == "__main__":
     main()

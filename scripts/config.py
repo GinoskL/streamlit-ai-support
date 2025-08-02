@@ -3,7 +3,7 @@ Configuración personalizable para tu tienda.
 Acá podés cambiar toda la info específica de tu negocio.
 """
 
-# Datos de tu tienda (cambialos por los tuyos)
+#Datos de mi tienda
 CONFIGURACION_TIENDA = {
     "nombre": "Tu Tienda de Ropa",
     "productos": "ropa para toda la familia: hombres, mujeres y chicos",
@@ -14,14 +14,14 @@ CONFIGURACION_TIENDA = {
     "beneficios": "programa de clientes frecuentes con descuentos especiales"
 }
 
-# Configuración técnica de la IA
+#Configuración técnica de la IA
 CONFIGURACION_IA = {
     "modelo": "gpt-3.5-turbo",
     "max_tokens": 350,
-    "temperature": 0.8  # Más creativo = más natural
+    "temperature": 0.8 
 }
 
-# El prompt que usa la IA (podés personalizarlo)
+#El prompt que usa la IA
 PROMPT_VENDEDOR = f"""
 Sos un vendedor experimentado de {CONFIGURACION_TIENDA['nombre']} que atiende clientes hace años.
 
