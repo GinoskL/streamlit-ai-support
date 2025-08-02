@@ -1,3 +1,6 @@
+.
+---
+
 ````markdown
 # 🏪 MiVendedor.AI
 
